@@ -28,11 +28,13 @@ class HillClimbingSolver(LocalSearchSolver):
             cur_cost = problem.evaluate(current)
             if cur_cost < best_cost:
                 best_state, best_cost = current, cur_cost
+            self.history.append(best_cost)
+            
 
             sideways = 0
-            plateau_visited = {current}
+            visited = {current}
 
-            for _ in range(self.max_steps):
+            while True:
                 neighbors = get_neighbors(current, problem)
                 if not neighbors:
                     break
@@ -64,5 +66,7 @@ class HillClimbingSolver(LocalSearchSolver):
 
                 if cur_cost < best_cost:
                     best_state, best_cost = current, cur_cost
+                self.history.append(best_cost)
+                
 
         return best_state, best_cost

@@ -33,6 +33,7 @@ class GeneticAlgorithmSolver(LocalSearchSolver):
 
         best_state = min(population, key=lambda s: cache[s])
         best_cost = cache[best_state]
+        self.history.append(best_cost)
 
         elites = self.elitism
 
@@ -41,7 +42,7 @@ class GeneticAlgorithmSolver(LocalSearchSolver):
             next_pop = list(ranked[:elites])
 
             while len(next_pop) < self.population_size:
-                k = min(self.tournament_size, len(population))
+                k = 2
                 p1 = max(random.sample(population, k), key=lambda s: 1.0 / (1.0 + cache[s]))
                 p2 = max(random.sample(population, k), key=lambda s: 1.0 / (1.0 + cache[s]))
 
@@ -64,5 +65,6 @@ class GeneticAlgorithmSolver(LocalSearchSolver):
             gen_best = min(population, key=lambda s: cache[s])
             if cache[gen_best] < best_cost:
                 best_state, best_cost = gen_best, cache[gen_best]
+            self.history.append(best_cost)
 
         return best_state, best_cost

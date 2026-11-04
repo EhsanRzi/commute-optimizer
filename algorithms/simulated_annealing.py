@@ -4,6 +4,7 @@ from core.state import State
 from core.problem import CommuteProblem
 from algorithms.operators import get_neighbors
 import random
+import math
 
 
 class SimulatedAnnealingSolver(LocalSearchSolver):
@@ -21,6 +22,8 @@ class SimulatedAnnealingSolver(LocalSearchSolver):
         current = problem.generate_initial_state()
         cur_cost = problem.evaluate(current)
         best_state, best_cost = current, cur_cost
+        self.history.append(best_cost)
+
 
         temp = self.initial_temp
         for _ in range(self.max_iterations):
@@ -40,6 +43,7 @@ class SimulatedAnnealingSolver(LocalSearchSolver):
                 if cur_cost < best_cost:
                     best_state, best_cost = current, cur_cost
 
+            self.history.append(best_cost)
             temp *= self.cooling_rate
 
         return best_state, best_cost

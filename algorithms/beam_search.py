@@ -32,6 +32,7 @@ class LocalBeamSearchSolver(LocalSearchSolver):
             cache[s] = problem.evaluate(s)
         best_state = min(beam, key=lambda s: cache[s])
         best_cost = cache[best_state]
+        self.history.append(best_cost)
         stale = 0
 
         for _ in range(self.max_iterations):
@@ -50,15 +51,9 @@ class LocalBeamSearchSolver(LocalSearchSolver):
             for s in ranked:
                 if len(selected) >= self.beam_width:
                     break
-                if per_path.get(s.path, 0) < self.max_per_path:
-                    selected.append(s)
-                    per_path[s.path] = per_path.get(s.path, 0) + 1
-                else:
-                    leftovers.append(s)
-            for s in leftovers:
-                if len(selected) >= self.beam_width:
-                    break
+                
                 selected.append(s)
+                per_path[s.path] = per_path.get(s.path, 0) + 1
 
             new_best = min(selected, key=lambda s: cache[s])
             if cache[new_best] < best_cost:
@@ -67,8 +62,9 @@ class LocalBeamSearchSolver(LocalSearchSolver):
             else:
                 stale += 1
 
+            self.history.append(best_cost)
             beam = selected
-            if stale >= self.patience:
+            if stale >= 50:
                 break
 
         return best_state, best_cost
