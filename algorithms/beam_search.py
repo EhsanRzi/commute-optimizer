@@ -1,13 +1,9 @@
-"""
-algorithms/beam_search.py
-Local Beam Search maintaining K parallel candidate states.
-"""
-
 from typing import Tuple
 from algorithms.base import LocalSearchSolver
 from core.state import State
 from core.problem import CommuteProblem
 from algorithms.operators import get_neighbors
+import random
 
 
 class LocalBeamSearchSolver(LocalSearchSolver):
@@ -17,21 +13,62 @@ class LocalBeamSearchSolver(LocalSearchSolver):
         self.max_iterations: int = self.params.get("max_iterations", 150)
 
     def solve(self) -> Tuple[State, float]:
-        """
-        Executes Local Beam Search.
+        problem = self.problem
+        cache = {}
 
-        Guidelines:
-        - Maintain a set of `beam_width` parallel configurations.
-        - In each iteration, generate neighbors from all active states in the beam.
-        - Pool and rank all generated successors collectively, then retain the top `beam_width` states.
-        - Halt when the beam ceases to improve or reaches max_iterations.
-        - Record the best cost of the population at each step in self.history.
+        base = problem.generate_initial_state()
+        beam = [base]
+        attempts = 0
+        while len(beam) < self.beam_width:
+            s = State(base.path, random.choice(problem.get_valid_time_domain()))
+            nbrs = get_neighbors(s, problem)
+            if nbrs:
+                s = random.choice(nbrs)
+            if s not in beam:
+                beam.append(s)
+            attempts += 1
 
-        Encouraged:
-        - Ensuring diversity across states in the beam to prevent collapse into a single redundant path.
+        for s in beam:
+            cache[s] = problem.evaluate(s)
+        best_state = min(beam, key=lambda s: cache[s])
+        best_cost = cache[best_state]
+        stale = 0
 
-        Prohibited:
-        - Treating this as K independent, non-communicating searches.
-        """
-        # TODO: Implement Local Beam Search
-        raise NotImplementedError("Implement solve() in algorithms/beam_search.py")
+        for _ in range(self.max_iterations):
+            pool = set(beam)
+            for s in beam:
+                pool.update(get_neighbors(s, problem))
+            for s in pool:
+                if s not in cache:
+                    cache[s] = problem.evaluate(s)
+
+            ranked = sorted(pool, key=lambda s: cache[s])
+
+            selected = []
+            leftovers = []
+            per_path = {}
+            for s in ranked:
+                if len(selected) >= self.beam_width:
+                    break
+                if per_path.get(s.path, 0) < self.max_per_path:
+                    selected.append(s)
+                    per_path[s.path] = per_path.get(s.path, 0) + 1
+                else:
+                    leftovers.append(s)
+            for s in leftovers:
+                if len(selected) >= self.beam_width:
+                    break
+                selected.append(s)
+
+            new_best = min(selected, key=lambda s: cache[s])
+            if cache[new_best] < best_cost:
+                best_state, best_cost = new_best, cache[new_best]
+                stale = 0
+            else:
+                stale += 1
+
+            beam = selected
+            if stale >= self.patience:
+                break
+
+        return best_state, best_cost

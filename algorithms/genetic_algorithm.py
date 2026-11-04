@@ -23,9 +23,8 @@ class GeneticAlgorithmSolver(LocalSearchSolver):
         while len(population) < self.population_size:
             s = State(base.path, random.choice(problem.get_valid_time_domain()))
             nbrs = get_neighbors(s, problem)
-            if not nbrs:
-                break
-            s = random.choice(nbrs)
+            if nbrs:
+                s = random.choice(nbrs)
             population.append(s)
 
         for s in population:
