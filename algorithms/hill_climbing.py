@@ -1,13 +1,9 @@
-"""
-algorithms/hill_climbing.py
-Hill Climbing search with sideways move limits and random restarts.
-"""
-
 from typing import Tuple
 from algorithms.base import LocalSearchSolver
 from core.state import State
 from core.problem import CommuteProblem
 from algorithms.operators import get_neighbors
+import random
 
 
 class HillClimbingSolver(LocalSearchSolver):
@@ -17,17 +13,56 @@ class HillClimbingSolver(LocalSearchSolver):
         self.max_restarts: int = self.params.get("max_restarts", 5)
 
     def solve(self) -> Tuple[State, float]:
-        """
-        Executes Hill Climbing optimization.
+        problem = self.problem
+        best_state = None
+        best_cost = float("inf")
 
-        Guidelines:
-        - Search through the neighborhood greedily for candidates that minimize total travel time.
-        - Handle flat local maxima / shoulders by allowing up to `max_sideways` non-improving steps.
-        - Apply up to `max_restarts` to explore different starting basins.
-        - Track the best objective cost seen at each major step in self.history.
+        for run in range(self.max_restarts):
+            current = problem.generate_initial_state()
+            current = State(current.path, random.choice(problem.get_valid_time_domain()))
+            nbrs = get_neighbors(current, problem)
+            if not nbrs:
+                break
+            current = random.choice(nbrs)
 
-        Prohibited:
-        - Looping indefinitely on flat plateaus.
-        """
-        # TODO: Implement Hill Climbing with sideways moves and restarts
-        raise NotImplementedError("Implement solve() in algorithms/hill_climbing.py")
+            cur_cost = problem.evaluate(current)
+            if cur_cost < best_cost:
+                best_state, best_cost = current, cur_cost
+
+            sideways = 0
+            plateau_visited = {current}
+
+            for _ in range(self.max_steps):
+                neighbors = get_neighbors(current, problem)
+                if not neighbors:
+                    break
+
+                score = [(problem.evaluate(nb), nb) for nb in neighbors]
+                best_n_cost = min(c for c, _ in score)
+
+                if best_n_cost < cur_cost:
+
+                    ties = [nb for c, nb in score if c==best_n_cost]
+                    current = random.choice(ties)
+                    cur_cost = best_n_cost
+                    sideways = 0
+                    visited = {current}
+
+                elif best_n_cost==cur_cost and sideways < self.max_sideways:
+                    
+                    ties = [
+                        nb for c, nb in score
+                        if c==cur_cost and nb not in visited
+                    ]
+                    if not ties:
+                        break
+                    current = random.choice(ties)
+                    visited.add(current)
+                    sideways += 1
+                else:
+                    break 
+
+                if cur_cost < best_cost:
+                    best_state, best_cost = current, cur_cost
+
+        return best_state, best_cost
